@@ -12,7 +12,7 @@ session = requests.Session()
 session.mount('http://', adapter)
 session.mount('https://', adapter)
 
-def gpt_message(model_name, api_key, text, image=None):
+def get_gpt_payload(model_name, text, image=None):
 
     if image:
         payload = {
@@ -49,7 +49,6 @@ def gpt_message(model_name, api_key, text, image=None):
 def gemini_call(inputs, dataset, model_name="gemini-pro", api_key="AIzaSyB2CP7uRo1f0AylHGylS7GkmVApim3-bps"):
 
     genai.configure(api_key=api_key)
-
     model = genai.GenerativeModel(model_name)
 
     all_responses = []
@@ -73,13 +72,12 @@ def gpt_call(inputs, dataset, model_name="gpt-4-0613", api_key="sk-3mbWxNumRvwOK
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
     
     for data in dataset:
-         
         question = data["question"]
         
         if "image" == inputs:
-            payload = gpt_message(model_name, api_key, question, data["image"])
+            payload = get_gpt_payload(model_name, question, data["image"])
         else:
-            payload = gpt_message(model_name, api_key, question)
+            payload = get_gpt_payload(model_name, question)
 
         response = requests.post(
             "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
