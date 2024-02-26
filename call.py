@@ -5,8 +5,11 @@ import pandas as pd
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 import google.generativeai as genai
+from google.api_core.exceptions import *
+import time
 
-retry_strategy = Retry(backoff_factor=2)
+
+retry_strategy = Retry(backoff_factor=2, allowed_methods=frozenset(['GET', 'POST']))
 adapter = HTTPAdapter(max_retries=retry_strategy)
 session = requests.Session()
 session.mount('http://', adapter)
@@ -48,6 +51,9 @@ def get_gpt_payload(model_name, text, image=None):
 
 def gemini_call(inputs, dataset, model_name="gemini-pro", api_key="AIzaSyB2CP7uRo1f0AylHGylS7GkmVApim3-bps"):
 
+    max_retries = 10 
+    base_delay = 1
+
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(model_name)
 
@@ -56,11 +62,55 @@ def gemini_call(inputs, dataset, model_name="gemini-pro", api_key="AIzaSyB2CP7uR
     for data in dataset:
         question = data["question"]
 
-        if "image" in inputs:
-            response = model.generate_content([question, data["image"]], stream=True)
-        else:
-            response = model.generate_content(question, stream=True)
-        response.resolve()
+        for retry_attempt in range(max_retries):
+            if "image" in inputs:
+                try:
+                    response = model.generate_content([question, data["image"]], stream=True)
+                except ServiceUnavailable as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
+                except Aborted as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
+                except PermissionDenied as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
+                except ResourceExhausted as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
+            else:
+                try:
+                    response = model.generate_content(question, stream=True)
+                except ServiceUnavailable as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
+                except Aborted as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
+                except PermissionDenied as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
+                except ResourceExhausted as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
+
+            response.resolve()
         all_responses.append(response.text)
 
     return all_responses
