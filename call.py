@@ -7,6 +7,8 @@ import google.generativeai as genai
 from google.api_core.exceptions import *
 import time
 
+from tqdm import tqdm
+
 
 retry_strategy = Retry(backoff_factor=2, allowed_methods=frozenset(['GET', 'POST']))
 adapter = HTTPAdapter(max_retries=retry_strategy)
@@ -58,7 +60,7 @@ def gemini_call(dataset, model_name, api_key, text_only):
 
     all_responses = dict()
 
-    for data in dataset:
+    for data in tqdm(dataset):
         question = data["question"]
 
         for retry_attempt in range(max_retries):
@@ -120,7 +122,7 @@ def gpt_call(dataset, model_name, api_key, text_only):
 
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
     
-    for data in dataset:
+    for data in tqdm(dataset):
         question = data["question"]
         
         if not text_only:
