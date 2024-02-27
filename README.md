@@ -12,3 +12,8 @@ Usage:
 ```sh
 python interface.py --llm --model "gpt-4-0413" --family "gpt" --config config.json --output_dir ckpts/
 ```
+
+Config:
+```
+{"keys" : {"gemini" : ""}, "dataset" : {"taesiri/simple_fsm_bench_long_text"}}
+```
