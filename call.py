@@ -49,7 +49,7 @@ def get_gpt_payload(model_name, text, image=None):
     return payload
 
 
-def gemini_call(inputs, dataset, model_name="gemini-pro", api_key="AIzaSyB2CP7uRo1f0AylHGylS7GkmVApim3-bps"):
+def gemini_call(dataset, model_name, api_key, text_only):
 
     max_retries = 10 
     base_delay = 1
@@ -57,13 +57,13 @@ def gemini_call(inputs, dataset, model_name="gemini-pro", api_key="AIzaSyB2CP7uR
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(model_name)
 
-    all_responses = []
+    all_responses = dict()
 
     for data in dataset:
         question = data["question"]
 
         for retry_attempt in range(max_retries):
-            if "image" in inputs:
+            if not text_only:
                 try:
                     response = model.generate_content([question, data["image"]], stream=True)
                 except ServiceUnavailable as e:
@@ -111,11 +111,11 @@ def gemini_call(inputs, dataset, model_name="gemini-pro", api_key="AIzaSyB2CP7uR
                         time.sleep(delay)
 
             response.resolve()
-        all_responses.append(response.text)
+        all_responses[data["id"]] = response.text
 
     return all_responses
 
-def gpt_call(inputs, dataset, model_name="gpt-4-0613", api_key="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"):
+def gpt_call(dataset, model_name, api_key, text_only):
     
     all_responses = []
 
@@ -124,7 +124,7 @@ def gpt_call(inputs, dataset, model_name="gpt-4-0613", api_key="sk-3mbWxNumRvwOK
     for data in dataset:
         question = data["question"]
         
-        if "image" == inputs:
+        if not text_only:
             payload = get_gpt_payload(model_name, question, data["image"])
         else:
             payload = get_gpt_payload(model_name, question)
@@ -133,12 +133,12 @@ def gpt_call(inputs, dataset, model_name="gpt-4-0613", api_key="sk-3mbWxNumRvwOK
             "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
         )
     
-        all_responses.append(response.json())
+        all_responses[data["id"]] = response.json()
 
     return all_responses
       
 
-def mixtral_call(inputs, dataset, model_name="mixtral", api_key="joejdwoejowdjd"):
+def mixtral_call(dataset, model_name, api_key, text_only):
     return 0
     
 
