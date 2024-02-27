@@ -1,6 +1,5 @@
 import numpy as np
 import requests
-from bs4 import BeautifulSoup
 import pandas as pd
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
