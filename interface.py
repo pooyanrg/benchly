@@ -47,7 +47,7 @@ def main():
     else:
         dataset = load_dataset(config["dataset"])
 
-    all_responses = api(dataset, args.model, api, api_key, args.llm)
+    all_responses = api(dataset, args.model, api_key, args.llm)
 
     save_results(args.output_dir, args.model, all_responses)
 
