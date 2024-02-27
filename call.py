@@ -67,6 +67,7 @@ def gemini_call(dataset, model_name, api_key, text_only):
             if not text_only:
                 try:
                     response = model.generate_content([question, data["image"]], stream=True)
+                    break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
                         delay = base_delay * 2 ** retry_attempt
@@ -90,6 +91,7 @@ def gemini_call(dataset, model_name, api_key, text_only):
             else:
                 try:
                     response = model.generate_content(question, stream=True)
+                    break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
                         delay = base_delay * 2 ** retry_attempt
@@ -111,7 +113,7 @@ def gemini_call(dataset, model_name, api_key, text_only):
                         print(f"Retrying in {delay} seconds...")
                         time.sleep(delay)
 
-            response.resolve()
+        response.resolve()
         all_responses[data["id"]] = response.text
 
     return all_responses
