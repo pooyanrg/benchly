@@ -32,7 +32,7 @@ def save_results(output_dir, model_name, responses):
 def main():
     args = get_args()
 
-    with open(args.config_path, 'r') as fp:
+    with open(args.config, 'r') as fp:
         config = json.load(fp)
     
     api_key = config["keys"][args.family]
