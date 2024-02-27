@@ -12,7 +12,7 @@ def get_args(description='Bencly on LLM/VLMs'):
     parser.add_argument("--model", type=str, default='gpt-4-0613', help='which model to use')
     parser.add_argument('--family', type=str, default='gpt', help='family for api key retrieval')
 
-    parser.add_argument('--config_path', type=str, default='config.json', help='config file path')
+    parser.add_argument('--config', type=str, default='config.json', help='config file path')
     parser.add_argument('--output_dir', type=str, default='ckpts/', help='output directory')
     parser.add_argument('--data_path', type=str, default='data/datapath', help='dataset directory')
 
