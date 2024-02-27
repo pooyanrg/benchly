@@ -132,7 +132,7 @@ def gpt_call(dataset, model_name, api_key, text_only):
         else:
             payload = get_gpt_payload(model_name, question)
 
-        response = requests.post(
+        response = session.post(
             "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
         )
     
