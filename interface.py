@@ -26,8 +26,9 @@ def save_results(output_dir, model_name, responses):
     if os.path.isfile(path):
         print("results already exist!")
     else:
-        with open(path, 'wb') as fp:
-            json.dump(responses)
+        with open(path, 'w') as fp:
+            json.dump(responses, fp)
+        print("results  saved!")
 
 def main():
     args = get_args()

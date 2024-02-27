@@ -61,7 +61,7 @@ def gemini_call(dataset, model_name, api_key, text_only):
     all_responses = dict()
 
     for data in tqdm(dataset):
-        question = data["question"]
+        question = data["query"]
 
         for retry_attempt in range(max_retries):
             if not text_only:
@@ -114,7 +114,7 @@ def gemini_call(dataset, model_name, api_key, text_only):
                         time.sleep(delay)
 
         response.resolve()
-        all_responses[data["id"]] = response.text
+        all_responses[data["fsm_id"]] = response.text
 
     return all_responses
 
@@ -125,7 +125,7 @@ def gpt_call(dataset, model_name, api_key, text_only):
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
     
     for data in tqdm(dataset):
-        question = data["question"]
+        question = data["query"]
         
         if not text_only:
             payload = get_gpt_payload(model_name, question, data["image"])
@@ -135,8 +135,8 @@ def gpt_call(dataset, model_name, api_key, text_only):
         response = session.post(
             "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
         )
-    
-        all_responses[data["id"]] = response.json()
+
+        all_responses[data["fsm_id"]] = response.json()
 
     return all_responses
       
