@@ -10,5 +10,5 @@ A simple benchmark api to prompt llm/vlms
 
 Usage:
 ```sh
-python interface.py --llm --model "gpt-4-0413" --family "gpt" --config ${PATH}
+python interface.py --llm --model "gpt-4-0413" --family "gpt" --config config.json --output_dir ckpts/
 ```
