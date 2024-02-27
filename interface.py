@@ -45,7 +45,7 @@ def main():
         with open(args.data_path, 'r') as fp:
             dataset = json.load(fp)
     else:
-        dataset = load_dataset(config["dataset"])
+        dataset = load_dataset(config["dataset"])["validation"]
 
     all_responses = api(dataset, args.model, api_key, args.llm)
 
