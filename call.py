@@ -60,16 +60,16 @@ def gemini_call(dataset, model_name, api_key, text_only):
 
     all_responses = dict()
 
-    for data in tqdm(dataset):
+    for i in tqdm(range(len(dataset))):
 
-        question = data["query"]
+        question = dataset.iloc[i]["query"]
 
         for retry_attempt in range(max_retries):
             if not text_only:
                 try:
-                    response = model.generate_content([question, data["image"]], stream=True)
+                    response = model.generate_content([question, dataset.iloc[i]["image"]], stream=True)
                     response.resolve()
-                    all_responses[data["query_id"]] = response.candidates[0].content.parts[0].text
+                    all_responses[dataset.iloc[i]["query_id"]] = response.candidates[0].content.parts[0].text
                     break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
@@ -95,7 +95,7 @@ def gemini_call(dataset, model_name, api_key, text_only):
                 try:
                     response = model.generate_content(question, stream=True)
                     response.resolve()
-                    all_responses[data["query_id"]] = response.candidates[0].content.parts[0].text
+                    all_responses[dataset.iloc[i]["query_id"]] = response.candidates[0].content.parts[0].text
                     break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
@@ -126,11 +126,12 @@ def gpt_call(dataset, model_name, api_key, text_only):
 
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
     
-    for data in tqdm(dataset):
-        question = data["query"]
+    for i in tqdm(range(len(dataset))):
+
+        question = dataset.iloc[i]["query"]
         
         if not text_only:
-            payload = get_gpt_payload(model_name, question, data["image"])
+            payload = get_gpt_payload(model_name, question, dataset.iloc[i]["image"])
         else:
             payload = get_gpt_payload(model_name, question)
 
@@ -142,7 +143,7 @@ def gpt_call(dataset, model_name, api_key, text_only):
             return all_responses
 
 
-        all_responses[data["query_id"]] = response.json()
+        all_responses[dataset.iloc[i]["query_id"]] = response.json()
 
     return all_responses
       

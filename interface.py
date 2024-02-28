@@ -51,13 +51,10 @@ def main():
         with open(args.data_path, 'r') as fp:
             dataset = json.load(fp)
     else:
-        dataset = load_dataset(config["dataset"])["validation"]
+        dataset = load_dataset(config["dataset"])["validation"].to_pandas()
 
         if args.seed > 0:
-            random.seed(args.seed)
-            limit_index = len(dataset) - args.seed_size
-            start_index = random.randint(0, limit_index - 1)
-            dataset = load_dataset(config["dataset"], split='validation[{}:{}]'.format(str(start_index), str(start_index + args.seed_size)))
+            dataset = dataset.sample(n=args.seed_size, random_state=args.seed)
 
     all_responses = api(dataset, args.model, api_key, args.llm)
 
