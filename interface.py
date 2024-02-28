@@ -27,6 +27,7 @@ def get_args(description='Bencly on LLM/VLMs'):
 def save_results(output_dir, model_name, responses):
 
     path = os.path.join(output_dir, model_name + "_responses.json")
+
     if os.path.isfile(path):
         print("results already exist!")
     else:
@@ -50,8 +51,7 @@ def main():
         with open(args.data_path, 'r') as fp:
             dataset = json.load(fp)
     else:
-    
-        if args.seed == 42:
+        if args.seed > 0:
             random.seed(args.seed)
             slice = args.seed_size
             dataset = load_dataset(config["dataset"], split='validation[:{}]'.format(str(slice)))
