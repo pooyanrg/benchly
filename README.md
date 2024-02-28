@@ -10,7 +10,7 @@ A simple benchmark api to prompt llm/vlms
 
 Usage:
 ```sh
-python interface.py --llm --model "gpt-4-0413" --family "gpt" --config config.json --output_dir ckpts/
+python interface.py --llm --model --seed 42 --seed_size 5 "gpt-4-0413" --family "gpt" --config config.json --output_dir ckpts/
 ```
 
 Config:
