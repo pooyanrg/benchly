@@ -62,14 +62,20 @@ def gemini_call(dataset, model_name, api_key, text_only):
 
     for i in tqdm(range(len(dataset))):
 
+        index = dataset.iloc[i]["query_id"]
+
+        all_responses[index] = dict()
+
         question = dataset.iloc[i]["query"]
+        all_responses[index]['query'] = question
+        all_responses[index]['gt_answer'] = dataset.iloc[i]["answer"]
 
         for retry_attempt in range(max_retries):
             if not text_only:
                 try:
                     response = model.generate_content([question, dataset.iloc[i]["image"]], stream=True)
                     response.resolve()
-                    all_responses[dataset.iloc[i]["query_id"]] = response.candidates[0].content.parts[0].text
+                    all_responses[index] = response.candidates[0].content.parts[0].text
                     break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
@@ -95,7 +101,7 @@ def gemini_call(dataset, model_name, api_key, text_only):
                 try:
                     response = model.generate_content(question, stream=True)
                     response.resolve()
-                    all_responses[dataset.iloc[i]["query_id"]] = response.candidates[0].content.parts[0].text
+                    all_responses[index] = response.candidates[0].content.parts[0].text
                     break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
@@ -128,7 +134,13 @@ def gpt_call(dataset, model_name, api_key, text_only):
     
     for i in tqdm(range(len(dataset))):
 
+        index = dataset.iloc[i]["query_id"]
+
+        all_responses[index] = dict()
+
         question = dataset.iloc[i]["query"]
+        all_responses[index]['query'] = question
+        all_responses[index]['gt_answer'] = dataset.iloc[i]["answer"]
         
         if not text_only:
             payload = get_gpt_payload(model_name, question, dataset.iloc[i]["image"])
@@ -143,7 +155,7 @@ def gpt_call(dataset, model_name, api_key, text_only):
             return all_responses
 
 
-        all_responses[dataset.iloc[i]["query_id"]] = response.json()
+        all_responses[index] = response.json()
 
     return all_responses
       

@@ -15,6 +15,7 @@ def get_args(description='Bencly on LLM/VLMs'):
     parser.add_argument('--family', type=str, default='gpt', help='family for api key retrieval')
     parser.add_argument('--seed', type=int, default=42, help='Whether to evaluate random samples')
     parser.add_argument('--seed_size', type=int, default=5, help='Number of random samples')
+    parser.add_argument('--diff_levels', type=list, default=[1], help='difficulty level to evaluate')
 
     parser.add_argument('--config', type=str, default='config.json', help='config file path')
     parser.add_argument('--output_dir', type=str, default='ckpts/', help='output directory')
@@ -52,7 +53,8 @@ def main():
             dataset = json.load(fp)
     else:
         dataset = load_dataset(config["dataset"])["validation"].to_pandas()
-
+        dataset = dataset[dataset['difficulty_level'].isin(args.diff_levels)]
+        
         if args.seed > 0:
             dataset = dataset.sample(n=args.seed_size, random_state=args.seed)
 
