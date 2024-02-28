@@ -61,12 +61,15 @@ def gemini_call(dataset, model_name, api_key, text_only):
     all_responses = dict()
 
     for data in tqdm(dataset):
+
         question = data["query"]
 
         for retry_attempt in range(max_retries):
             if not text_only:
                 try:
                     response = model.generate_content([question, data["image"]], stream=True)
+                    response.resolve()
+                    all_responses[data["query_id"]] = response.candidates[0].content.parts[0].text
                     break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
@@ -91,6 +94,8 @@ def gemini_call(dataset, model_name, api_key, text_only):
             else:
                 try:
                     response = model.generate_content(question, stream=True)
+                    response.resolve()
+                    all_responses[data["query_id"]] = response.candidates[0].content.parts[0].text
                     break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
@@ -112,9 +117,6 @@ def gemini_call(dataset, model_name, api_key, text_only):
                         delay = base_delay * 2 ** retry_attempt
                         print(f"Retrying in {delay} seconds...")
                         time.sleep(delay)
-
-        response.resolve()
-        all_responses[data["fsm_id"]] = response.text
 
     return all_responses
 
@@ -140,7 +142,7 @@ def gpt_call(dataset, model_name, api_key, text_only):
             return all_responses
 
 
-        all_responses[data["fsm_id"]] = response.json()
+        all_responses[data["query_id"]] = response.json()
 
     return all_responses
       

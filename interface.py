@@ -2,6 +2,8 @@ import argparse
 import json
 import os
 from datasets import load_dataset
+import random
+import pandas as pd
 
 from call import API_LIST
 
@@ -11,6 +13,8 @@ def get_args(description='Bencly on LLM/VLMs'):
     parser.add_argument('--llm', action='store_true', help="Whether to use text inputs only.")
     parser.add_argument("--model", type=str, default='gpt-4-0613', help='which model to use')
     parser.add_argument('--family', type=str, default='gpt', help='family for api key retrieval')
+    parser.add_argument('--seed', type=int, default=42, help='Whether to evaluate random samples')
+    parser.add_argument('--seed_size', type=int, default=5, help='Number of random samples')
 
     parser.add_argument('--config', type=str, default='config.json', help='config file path')
     parser.add_argument('--output_dir', type=str, default='ckpts/', help='output directory')
@@ -46,7 +50,13 @@ def main():
         with open(args.data_path, 'r') as fp:
             dataset = json.load(fp)
     else:
-        dataset = load_dataset(config["dataset"])["validation"]
+    
+        if args.seed == 42:
+            random.seed(args.seed)
+            slice = args.seed_size
+            dataset = load_dataset(config["dataset"], split='validation[:{}]'.format(str(slice)))
+        else:
+            dataset = load_dataset(config["dataset"])["validation"]
 
     all_responses = api(dataset, args.model, api_key, args.llm)
 
