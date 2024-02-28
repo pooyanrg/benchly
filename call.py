@@ -120,7 +120,7 @@ def gemini_call(dataset, model_name, api_key, text_only):
 
 def gpt_call(dataset, model_name, api_key, text_only):
     
-    all_responses = []
+    all_responses = dict()
 
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
     
@@ -132,9 +132,13 @@ def gpt_call(dataset, model_name, api_key, text_only):
         else:
             payload = get_gpt_payload(model_name, question)
 
-        response = session.post(
-            "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
-        )
+        try:
+            response = session.post(
+                "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
+            )
+        except:
+            return all_responses
+
 
         all_responses[data["fsm_id"]] = response.json()
 
