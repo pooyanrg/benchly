@@ -46,7 +46,7 @@ def main():
         with open(args.input_file, 'r') as fp:
             responses = json.load(fp)
 
-    question = config["template"]
+    question = config["template_judge"]
 
     all_responses = api(question, responses, args.model, api_key)
 
