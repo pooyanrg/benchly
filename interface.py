@@ -5,7 +5,7 @@ from datasets import load_dataset
 
 from call import API_LIST, get_logger
 
-def get_args(description='Bencly on LLM/VLMs'):
+def get_args(description='Benchly on LLM/VLMs'):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--llm', action='store_true', help="Whether to use text inputs only.")
     parser.add_argument("--model", type=str, default='gpt-4-0613', help='which model to use')

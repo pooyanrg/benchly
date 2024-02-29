@@ -6,7 +6,7 @@ import logging
 
 from call import JUDGE_API_LIST, get_logger
 
-def get_args(description='Bencly Judge Evaluation'):
+def get_args(description='Benchly Judge Evaluation'):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--model", type=str, default='gpt-4-0613', help='which model to use')
     parser.add_argument('--family', type=str, default='gpt', help='family for api key retrieval')
