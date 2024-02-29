@@ -17,14 +17,16 @@ A simple benchmark api to prompt llm/vlms
   }
 ```
 
+## Prompting
+
 Usage:
 ```sh
 python interface.py --llm --model "gpt-4-0413" --seed 42 --seed_size 5 --family "gpt" --config config.json --output_dir ckpts/
 ```
-## Seed usage
+# Seed usage
 set seed to 0 to evaluate the whole dataset.
 
-## output
+# output
 
 for each query the script will generate a json file: 
 
@@ -36,12 +38,14 @@ for each query the script will generate a json file:
   }
 ```
 
-Usage (judge):
+## Judge
+
+Usage:
 ```sh
 python judge_interface.py --model "gpt-4-0413" --family "gpt" --config config.json --output_dir results/ --input_file ckpts/gemini-pro_response.json
 ```
 
-## output
+# output
 
 for each query the script will generate a json file: 
 
