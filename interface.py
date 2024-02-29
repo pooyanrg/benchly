@@ -3,7 +3,7 @@ import json
 import os
 from datasets import load_dataset
 
-from call import API_LIST, get_logger
+from call import API_LIST, get_logger, save_results
 
 def get_args(description='Benchly on LLM/VLMs'):
     parser = argparse.ArgumentParser(description=description)
@@ -37,7 +37,7 @@ def main():
         api = API_LIST[args.family]
         
         if not os.path.isdir(args.output_dir):
-            os.makedirs(args.output_dir)
+            os.makedirs(args.output_dir + '/temp')
         
         logger = get_logger(os.path.join(args.output_dir, "log.txt"))
 
@@ -60,7 +60,16 @@ def main():
         logger.info('\t>>>text mode: {}'.format(args.llm))
         logger.info('\t>>>difficulty level: {}'.format(diff_levels_int))
 
-        api(dataset, args.model, api_key, args.output_dir, args.llm)
+        api(dataset, args.model, api_key, args.output_dir + '/temp/', args.llm)
+
+        responses = dict()
+        
+        for file in sorted(os.listdir(args.output_dir + '/temp/')):
+            with open(os.path.join(args.output_dir + '/temp/', file), 'r') as fp:
+                response = json.load(fp)
+            responses[response['query_id']] = response
+
+        save_results(args.output_dir, args.model, responses)
 
 
 if __name__ == "__main__":

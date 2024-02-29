@@ -34,7 +34,7 @@ def get_logger(filename=None):
 
 def save_results(output_dir, model_name, response):
 
-    path = os.path.join(output_dir, model_name + "response.json")
+    path = os.path.join(output_dir, model_name + "_response.json")
 
     with open(path, 'w') as fp:
         json.dump(response, fp)
@@ -96,7 +96,7 @@ def gemini_call(dataset, model_name, api_key, path, text_only=True):
                     response = model.generate_content([question, dataset.iloc[i]["image"]], stream=True)
                     response.resolve()
                     response_dict['response'] = response.candidates[0].content.parts[0].text
-                    save_results(path,  model_name + '_' + str(response_dict["query_id"]) + '_', response_dict)
+                    save_results(path,  model_name + '_' + str(response_dict["query_id"]), response_dict)
                     break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
@@ -123,7 +123,7 @@ def gemini_call(dataset, model_name, api_key, path, text_only=True):
                     response = model.generate_content(question, stream=True)
                     response.resolve()
                     response_dict['response'] = response.candidates[0].content.parts[0].text
-                    save_results(path,  model_name + '_' + str(response_dict["query_id"]) + '_', response_dict)
+                    save_results(path,  model_name + '_' + str(response_dict["query_id"]), response_dict)
                     break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
@@ -172,7 +172,7 @@ def gpt_call(dataset, model_name, api_key, path, text_only=True):
                 "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
             )
             response_dict['response'] = response.json()
-            save_results(path,  model_name + '_' + str(response_dict["query_id"]) + '_', response_dict)
+            save_results(path,  model_name + '_' + str(response_dict["query_id"]), response_dict)
         except:
             print("request error!")
       
@@ -202,7 +202,7 @@ def mixtral_call(dataset, model_name, api_key, path, text_only=True):
                 "http://localhost:11434/api/chat", headers=headers, json=data
             )
             response_dict['response'] = response.json()
-            save_results(path,  model_name + '_' + str(response_dict["query_id"]) + '_', response_dict)
+            save_results(path,  model_name + '_' + str(response_dict["query_id"]), response_dict)
         except:
             print("request error!")
     
@@ -224,7 +224,7 @@ def gemini_judge(question, responses, model_name, api_key, path):
         response.resolve()
         response_dict['judge_response'] = response.candidates[0].content.parts[0].text
 
-        save_results(path, model_name + '_' + str(id) + '_', response_dict)
+        save_results(path, model_name + '_' + str(id), response_dict)
 
 def gpt_judge(question, responses, model_name, api_key, path):
 
@@ -250,7 +250,7 @@ def gpt_judge(question, responses, model_name, api_key, path):
 
             response_dict['judge_response'] = response.json()
 
-            save_results(path, model_name + '_' + str(id) + '_', response_dict)
+            save_results(path, model_name + '_' + str(id), response_dict)
         except:
             print("server error!")
 
@@ -274,7 +274,7 @@ def mixtral_judge(question, responses, model_name, api_key, path):
             )
             response_dict['judge_response'] = response.json()
 
-            save_results(path, model_name + '_' + str(id) + '_', response_dict)
+            save_results(path, model_name + '_' + str(id), response_dict)
         except:
             print("server error!")
 
