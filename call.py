@@ -6,6 +6,8 @@ from urllib3.util import Retry
 import google.generativeai as genai
 from google.api_core.exceptions import *
 import time
+import os
+import json
 
 from tqdm import tqdm
 
@@ -15,6 +17,15 @@ session = requests.Session()
 session.mount('http://', adapter)
 session.mount('https://', adapter)
 
+
+def save_results(output_dir, model_name, response):
+
+    path = os.path.join(output_dir, model_name + "response.json")
+
+    with open(path, 'w') as fp:
+        json.dump(response, fp)
+
+    print("results  saved!")
 
 def get_gpt_payload(model_name, text, image=None):
 
@@ -50,7 +61,7 @@ def get_gpt_payload(model_name, text, image=None):
     return payload
 
 
-def gemini_call(dataset, model_name, api_key, text_only=True):
+def gemini_call(dataset, model_name, api_key, path, text_only=True):
 
     max_retries = 10 
     base_delay = 1
@@ -58,24 +69,22 @@ def gemini_call(dataset, model_name, api_key, text_only=True):
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(model_name)
 
-    all_responses = dict()
-
     for i in tqdm(range(len(dataset))):
 
-        index = dataset.iloc[i]["query_id"]
-
-        all_responses[index] = dict()
+        response_dict = dict()
+        response_dict['query_id'] = dataset.iloc[i]["query_id"]
 
         question = dataset.iloc[i]["query"]
-        all_responses[index]['query'] = question
-        all_responses[index]['gt_answer'] = dataset.iloc[i]["answer"]
+        response_dict['query'] = question
+        response_dict['gt_answer'] = dataset.iloc[i]["answer"]
 
         for retry_attempt in range(max_retries):
             if not text_only:
                 try:
                     response = model.generate_content([question, dataset.iloc[i]["image"]], stream=True)
                     response.resolve()
-                    all_responses[index]['response'] = response.candidates[0].content.parts[0].text
+                    response_dict['response'] = response.candidates[0].content.parts[0].text
+                    save_results(path,  model_name + '_' + str(response_dict["query_id"]) + '_', response_dict)
                     break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
@@ -101,7 +110,8 @@ def gemini_call(dataset, model_name, api_key, text_only=True):
                 try:
                     response = model.generate_content(question, stream=True)
                     response.resolve()
-                    all_responses[index]['response'] = response.candidates[0].content.parts[0].text
+                    response_dict['response'] = response.candidates[0].content.parts[0].text
+                    save_results(path,  model_name + '_' + str(response_dict["query_id"]) + '_', response_dict)
                     break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
@@ -123,24 +133,22 @@ def gemini_call(dataset, model_name, api_key, text_only=True):
                         delay = base_delay * 2 ** retry_attempt
                         print(f"Retrying in {delay} seconds...")
                         time.sleep(delay)
+        
+        if retry_attempt > max_retries:
+            print("server error!")
 
-    return all_responses
-
-def gpt_call(dataset, model_name, api_key, text_only=True):
-    
-    all_responses = dict()
+def gpt_call(dataset, model_name, api_key, path, text_only=True):
 
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
     
     for i in tqdm(range(len(dataset))):
 
-        index = dataset.iloc[i]["query_id"]
-
-        all_responses[index] = dict()
+        response_dict = dict()
+        response_dict['query_id'] = dataset.iloc[i]["query_id"]
 
         question = dataset.iloc[i]["query"]
-        all_responses[index]['query'] = question
-        all_responses[index]['gt_answer'] = dataset.iloc[i]["answer"]
+        response_dict['query'] = question
+        response_dict['gt_answer'] = dataset.iloc[i]["answer"]
         
         if not text_only:
             payload = get_gpt_payload(model_name, question, dataset.iloc[i]["image"])
@@ -151,34 +159,29 @@ def gpt_call(dataset, model_name, api_key, text_only=True):
             response = session.post(
                 "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
             )
+            response_dict['response'] = response.json()
+            save_results(path,  model_name + '_' + str(response_dict["query_id"]) + '_', response_dict)
         except:
-            return all_responses
-
-
-        all_responses[index]['response'] = response.json()
-
-    return all_responses
+            print("request error!")
       
 
-def mixtral_call(dataset, model_name, api_key, text_only=True):
+def mixtral_call(dataset, model_name, api_key, path, text_only=True):
     
     if not text_only:
         print("Mixtral is not a VLM!")
         return {}
 
-    all_responses = dict()
 
     headers = {"Content-Type": "application/json"}
     
     for i in tqdm(range(len(dataset))):
 
-        index = dataset.iloc[i]["query_id"]
-
-        all_responses[index] = dict()
+        response_dict = dict()
+        response_dict["query_id"] = dataset.iloc[i]["query_id"]
 
         question = dataset.iloc[i]["query"]
-        all_responses[index]['query'] = question
-        all_responses[index]['gt_answer'] = dataset.iloc[i]["answer"]
+        response_dict['query'] = question
+        response_dict['gt_answer'] = dataset.iloc[i]["answer"]
 
         data = {"model": "mixtral", "messages": [{"role": "user", "content": question}]}
         
@@ -186,38 +189,42 @@ def mixtral_call(dataset, model_name, api_key, text_only=True):
             response = session.post(
                 "http://localhost:11434/api/chat", headers=headers, json=data
             )
+            response_dict['response'] = response.json()
+            save_results(path,  model_name + '_' + str(response_dict["query_id"]) + '_', response_dict)
         except:
-            return all_responses
-
-
-        all_responses[index]['response'] = response.json()
-
-    return all_responses
+            print("request error!")
     
-def gemini_judge(question, responses, model_name, api_key):
+def gemini_judge(question, responses, model_name, api_key, path):
 
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(model_name)
 
-    all_responses = dict()
-    for id, value in responses.items():
-        all_responses[id] = dict()
+
+    for id, value in tqdm(responses.items()):
+        response_dict = dict()
+        response_dict['query'] = question
+        response_dict['query_id'] = id
         
         temp_values = dict({'model_output': value['response'], 'gt_answer':value['gt_answer']})
         query = question.format(**temp_values)
+
         response = model.generate_content(query, stream=True)
         response.resolve()
-        all_responses[id]['judge_response'] = response.candidates[0].content.parts[0].text
+        response_dict['judge_response'] = response.candidates[0].content.parts[0].text
 
-    return all_responses
+        save_results(path, model_name + '_' + str(id) + '_', response_dict)
 
-def gpt_judge(question, responses, model_name, api_key):
+def gpt_judge(question, responses, model_name, api_key, path):
 
-    all_responses = dict()
+    response_dict = dict()
+
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
 
-    for id, value in responses.items():
-        all_responses[id] = dict()
+    for id, value in tqdm(responses.items()):
+
+        response_dict = dict()
+        response_dict['query'] = question
+        response_dict['query_id'] = id
         
         temp_values = dict({'model_output': value['response'], 'gt_answer':value['gt_answer']})
         query = question.format(**temp_values)
@@ -228,21 +235,21 @@ def gpt_judge(question, responses, model_name, api_key):
             response = session.post(
                 "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
             )
+
+            response_dict['judge_response'] = response.json()
+
+            save_results(path, model_name + '_' + str(id) + '_', response_dict)
         except:
-            return all_responses
-        
-        all_responses[id]['judge_response'] = response.json()
+            print("server error!")
 
-    return all_responses
-
-def mixtral_judge(question, responses, model_name, api_key):
-
-    all_responses = dict()
+def mixtral_judge(question, responses, model_name, api_key, path):
 
     headers = {"Content-Type": "application/json"}
 
-    for id, value in responses.items():
-        all_responses[id] = dict()
+    for id, value in tqdm(responses.items()):
+        response_dict = dict()
+        response_dict['query'] = question
+        response_dict['query_id'] = id
         
         temp_values = dict({'model_output': value['response'], 'gt_answer':value['gt_answer']})
         query = question.format(**temp_values)
@@ -253,12 +260,11 @@ def mixtral_judge(question, responses, model_name, api_key):
             response = session.post(
                 "http://localhost:11434/api/chat", headers=headers, json=data
             )
-        except:
-            return all_responses
-        
-        all_responses[id]['judge_response'] = response.json()
+            response_dict['judge_response'] = response.json()
 
-    return all_responses
+            save_results(path, model_name + '_' + str(id) + '_', response_dict)
+        except:
+            print("server error!")
 
 
 
