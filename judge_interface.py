@@ -2,7 +2,9 @@ import argparse
 import json
 import os
 
-from call import JUDGE_API_LIST
+import logging
+
+from call import JUDGE_API_LIST, get_logger
 
 def get_args(description='Bencly Judge Evaluation'):
     parser = argparse.ArgumentParser(description=description)
@@ -25,14 +27,16 @@ def main():
 
     if os.path.isdir(args.output_dir):
         print("results file already exists! Change the output directory.")
-        
+
     else:
-    
+
         api_key = config["keys"][args.family]
         api = JUDGE_API_LIST[args.family]
 
         if not os.path.isdir(args.output_dir):
             os.makedirs(args.output_dir)
+        
+        logger = get_logger(os.path.join(args.output_dir, "log.txt"))
 
         responses = dict()
 
@@ -43,6 +47,10 @@ def main():
                 responses[response['query_id']] = response
 
         question = config["template_judge"]
+
+        logger.info("Experiment details:")
+        logger.info('\t>>>model: {}'.format(args.model))
+        logger.info('\t>>>query: {}'.format(question))
 
         api(question, responses, args.model, api_key, args.output_dir)
 

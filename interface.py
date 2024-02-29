@@ -3,7 +3,7 @@ import json
 import os
 from datasets import load_dataset
 
-from call import API_LIST
+from call import API_LIST, get_logger
 
 def get_args(description='Bencly on LLM/VLMs'):
     parser = argparse.ArgumentParser(description=description)
@@ -32,12 +32,15 @@ def main():
         print("results file already exists! Change the output directory.")
 
     else:
+
         api_key = config["keys"][args.family]
         api = API_LIST[args.family]
         
         if not os.path.isdir(args.output_dir):
             os.makedirs(args.output_dir)
         
+        logger = get_logger(os.path.join(args.output_dir, "log.txt"))
+
         if os.path.isfile(args.data_path):
             with open(args.data_path, 'r') as fp:
                 dataset = json.load(fp)
@@ -49,6 +52,13 @@ def main():
             
             if args.seed > 0:
                 dataset = dataset.sample(n=args.seed_size, random_state=args.seed)
+
+        logger.info("Experiment details:")
+        logger.info('\t>>>seed: {}'.format(args.seed))
+        logger.info('\t>>>random size: {}'.format(args.seed_size))
+        logger.info('\t>>>model: {}'.format(args.model))
+        logger.info('\t>>>text mode: {}'.format(args.llm))
+        logger.info('\t>>>difficulty level: {}'.format(diff_levels_int))
 
         api(dataset, args.model, api_key, args.output_dir, args.llm)
 
