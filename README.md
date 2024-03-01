@@ -4,10 +4,10 @@ A simple benchmark api to prompt llm/vlms
 
 ## Files
 
-
-1. `interface.py` - the interface to run api
-2. `judge_interface.py` - the interface to run judge
-3. `call.py` - requests/response engine
+1. `run_benchly.sh` - script to run the pipeline
+2. `interface.py` - the interface to run api
+3. `judge_interface.py` - the interface to run judge
+4. `call.py` - requests/response engine
 
 ## Config:
 ```
@@ -17,6 +17,11 @@ A simple benchmark api to prompt llm/vlms
     "template_judge":"Given the model the two strings, generate 0 if they are equivalent, otherwise generate 1.\n{model_output}\n{gt_answer}",
   }
 ```
+## How to use the pipeline
+```sh
+bash run_benchly.sh
+```
+
 
 ## Prompting
 
