@@ -13,7 +13,6 @@ A simple benchmark api to prompt llm/vlms
 ```
 {"keys" : {"gemini" : ""},
     "dataset" : {"taesiri/simple_fsm_bench_long_text"},
-    "experiment": "transition_matrix_text_only"
     "template_judge":"Given the model the two strings, generate 0 if they are equivalent, otherwise generate 1.\n{model_output}\n{gt_answer}",
   }
 ```
