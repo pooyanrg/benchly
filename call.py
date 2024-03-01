@@ -47,7 +47,6 @@ def result_exists(path):
         with open(path, 'r') as fp:
             temp = json.load(fp)
         if len(temp.keys()) > 0:
-            print("result exists!")
             return 1
     return 0
 
