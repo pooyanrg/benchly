@@ -4,7 +4,7 @@ import os
 
 import logging
 
-from call import JUDGE_API_LIST, get_logger, save_results
+from call import JUDGE_API_LIST, get_logger, save_results, result_exists
 
 def get_args(description='Benchly Judge Evaluation'):
     parser = argparse.ArgumentParser(description=description)
@@ -12,7 +12,7 @@ def get_args(description='Benchly Judge Evaluation'):
     parser.add_argument('--family', type=str, default='gpt', help='family for api key retrieval')
 
     parser.add_argument('--config', type=str, default='config.json', help='config file path')
-    parser.add_argument('--input_file', type=str, default='ckpts/gemini-proresponse.json', help='input directory')
+    parser.add_argument('--input_file', type=str, default='ckpts/gemini-pro.json', help='input directory')
     parser.add_argument('--output_dir', type=str, default='results/', help='output directory')
 
     args = parser.parse_args()
@@ -25,37 +25,36 @@ def main():
     with open(args.config, 'r') as fp:
         config = json.load(fp)
 
-    if os.path.isdir(args.output_dir):
-        print("results file already exists! Change the output directory.")
+    api_key = config["keys"][args.family]
+    api = JUDGE_API_LIST[args.family]
 
-    else:
+    output_path = args.output_dir + '/temp'
+    
+    if not os.path.isdir(output_path):
+        os.makedirs(output_path)
+    
+    logger = get_logger(os.path.join(args.output_dir, "log.txt"))
 
-        api_key = config["keys"][args.family]
-        api = JUDGE_API_LIST[args.family]
+    with open(args.input_file, 'r') as fp:
+        responses = json.load(fp)
 
-        if not os.path.isdir(args.output_dir):
-            os.makedirs(args.output_dir + '/temp/')
-        
-        logger = get_logger(os.path.join(args.output_dir, "log.txt"))
+    question = config["template_judge"]
 
-        with open(args.input_file, 'r') as fp:
-            responses = json.load(fp)
+    logger.info("Experiment details:")
+    logger.info('\t>>>model: {}'.format(args.model))
+    logger.info('\t>>>query: {}'.format(question))
 
-        question = config["template_judge"]
+    api(question, responses, args.model, api_key, output_path)
 
-        logger.info("Experiment details:")
-        logger.info('\t>>>model: {}'.format(args.model))
-        logger.info('\t>>>query: {}'.format(question))
+    answers = dict()
+    for file in sorted(os.listdir(output_path)):
+        with open(os.path.join(output_path, file), 'r') as fp:
+            answer = json.load(fp)
+        answers[answer['query_id']] = answer
 
-        api(question, responses, args.model, api_key, args.output_dir + '/temp/')
-
-        answers = dict()
-        for file in sorted(os.listdir(args.output_dir + '/temp/')):
-            with open(os.path.join(args.output_dir + '/temp/', file), 'r') as fp:
-                answer = json.load(fp)
-            answers[answer['query_id']] = answer
-
-        save_results(args.output_dir, args.model, answers)
+    save_path = os.path.join(args.output_dir, args.model + '.json')
+    if not result_exists(save_path):
+        save_results(save_path, responses)
 
 
 if __name__ == "__main__":

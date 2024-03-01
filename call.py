@@ -32,12 +32,24 @@ def get_logger(filename=None):
     return logger
 
 
-def save_results(output_dir, model_name, response):
+def save_results(path, response):
 
-    path = os.path.join(output_dir, model_name + "_response.json")
+    def convert_numpy_bool(obj):
+        if isinstance(obj, np.bool_):
+            return bool(obj)
+        raise TypeError
 
     with open(path, 'w') as fp:
-        json.dump(response, fp)
+        json.dump(response, fp, default=convert_numpy_bool)
+
+def result_exists(path):
+    if os.path.exists(path):
+        with open(path, 'r') as fp:
+            temp = json.load(fp)
+        if len(temp.keys()) > 0:
+            print("result exists!")
+            return 1
+    return 0
 
 def get_gpt_payload(model_name, text, image=None):
 
@@ -90,13 +102,16 @@ def gemini_call(dataset, model_name, api_key, path, text_only=True):
         response_dict['query'] = question
         response_dict['gt_answer'] = dataset.iloc[i]["answer"]
 
+        save_path = os.path.join(path, model_name + '_' + str(response_dict["query_id"])) + '.json'
+
         for retry_attempt in range(max_retries):
             if not text_only:
                 try:
-                    response = model.generate_content([question, dataset.iloc[i]["image"]], stream=True)
-                    response.resolve()
-                    response_dict['response'] = response.candidates[0].content.parts[0].text
-                    save_results(path,  model_name + '_' + str(response_dict["query_id"]), response_dict)
+                    if not result_exists(save_path):
+                        response = model.generate_content([question, dataset.iloc[i]["image"]], stream=True)
+                        response.resolve()
+                        response_dict['response'] = response.candidates[0].content.parts[0].text
+                        save_results(save_path, response_dict)
                     break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
@@ -120,10 +135,11 @@ def gemini_call(dataset, model_name, api_key, path, text_only=True):
                         time.sleep(delay)
             else:
                 try:
-                    response = model.generate_content(question, stream=True)
-                    response.resolve()
-                    response_dict['response'] = response.candidates[0].content.parts[0].text
-                    save_results(path,  model_name + '_' + str(response_dict["query_id"]), response_dict)
+                    if not result_exists(save_path):
+                        response = model.generate_content(question, stream=True)
+                        response.resolve()
+                        response_dict['response'] = response.candidates[0].content.parts[0].text
+                        save_results(save_path, response_dict)
                     break
                 except ServiceUnavailable as e:
                     if retry_attempt < max_retries - 1:
@@ -161,6 +177,8 @@ def gpt_call(dataset, model_name, api_key, path, text_only=True):
         question = dataset.iloc[i]["query"]
         response_dict['query'] = question
         response_dict['gt_answer'] = dataset.iloc[i]["answer"]
+
+        save_path = os.path.join(path, model_name + '_' + str(response_dict["query_id"])) + '.json'
         
         if not text_only:
             payload = get_gpt_payload(model_name, question, dataset.iloc[i]["image"])
@@ -168,11 +186,12 @@ def gpt_call(dataset, model_name, api_key, path, text_only=True):
             payload = get_gpt_payload(model_name, question)
 
         try:
-            response = session.post(
-                "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
-            )
-            response_dict['response'] = response.json()
-            save_results(path,  model_name + '_' + str(response_dict["query_id"]), response_dict)
+            if not result_exists(save_path):
+                response = session.post(
+                    "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
+                )
+                response_dict['response'] = response.json()
+                save_results(save_path, response_dict)
         except:
             print("request error!")
       
@@ -197,12 +216,15 @@ def mixtral_call(dataset, model_name, api_key, path, text_only=True):
 
         data = {"model": "mixtral", "messages": [{"role": "user", "content": question}]}
         
+        save_path = os.path.join(path, model_name + '_' + str(response_dict["query_id"])) + '.json'
+
         try:
-            response = session.post(
-                "http://localhost:11434/api/chat", headers=headers, json=data
-            )
-            response_dict['response'] = response.json()
-            save_results(path,  model_name + '_' + str(response_dict["query_id"]), response_dict)
+            if not result_exists(save_path):
+                response = session.post(
+                    "http://localhost:11434/api/chat", headers=headers, json=data
+                )
+                response_dict['response'] = response.json()
+                save_results(save_path, response_dict)
         except:
             print("request error!")
     
@@ -220,11 +242,14 @@ def gemini_judge(question, responses, model_name, api_key, path):
         temp_values = dict({'model_output': value['response'], 'gt_answer':value['gt_answer']})
         query = question.format(**temp_values)
 
-        response = model.generate_content(query, stream=True)
-        response.resolve()
-        response_dict['judge_response'] = response.candidates[0].content.parts[0].text
+        save_path = os.path.join(path, model_name + '_' + str(id)) + '.json'
 
-        save_results(path, model_name + '_' + str(id), response_dict)
+        if not result_exists(save_path):
+            response = model.generate_content(query, stream=True)
+            response.resolve()
+            response_dict['judge_response'] = response.candidates[0].content.parts[0].text
+
+            save_results(save_path, response_dict)
 
 def gpt_judge(question, responses, model_name, api_key, path):
 
@@ -243,14 +268,17 @@ def gpt_judge(question, responses, model_name, api_key, path):
         
         payload = get_gpt_payload(model_name, query)
 
+        save_path = os.path.join(path, model_name + '_' + str(id)) + '.json'
+
         try:
-            response = session.post(
-                "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
-            )
+            if not result_exists(save_path):
+                response = session.post(
+                    "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
+                )
 
-            response_dict['judge_response'] = response.json()
+                response_dict['judge_response'] = response.json()
 
-            save_results(path, model_name + '_' + str(id), response_dict)
+                save_results(save_path, response_dict)
         except:
             print("server error!")
 
@@ -268,13 +296,16 @@ def mixtral_judge(question, responses, model_name, api_key, path):
         
         data = {"model": "mixtral", "messages": [{"role": "user", "content": query}]}
 
-        try:
-            response = session.post(
-                "http://localhost:11434/api/chat", headers=headers, json=data
-            )
-            response_dict['judge_response'] = response.json()
+        save_path = os.path.join(path, model_name + '_' + str(id)) + '.json'
 
-            save_results(path, model_name + '_' + str(id), response_dict)
+        try:
+            if not result_exists(save_path):
+                response = session.post(
+                    "http://localhost:11434/api/chat", headers=headers, json=data
+                )
+                response_dict['judge_response'] = response.json()
+
+                save_results(save_path, response_dict)
         except:
             print("server error!")
 

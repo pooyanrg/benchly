@@ -3,7 +3,7 @@ import json
 import os
 from datasets import load_dataset
 
-from call import API_LIST, get_logger, save_results
+from call import API_LIST, get_logger, save_results, result_exists
 
 def get_args(description='Benchly on LLM/VLMs'):
     parser = argparse.ArgumentParser(description=description)
@@ -28,48 +28,47 @@ def main():
     with open(args.config, 'r') as fp:
         config = json.load(fp)
 
-    if os.path.isdir(args.output_dir):
-        print("results file already exists! Change the output directory.")
+    api_key = config["keys"][args.family]
+    api = API_LIST[args.family]
+    
+    output_path = args.output_dir + '/temp'
 
+    if not os.path.isdir(output_path):
+        os.makedirs(output_path)
+    
+    logger = get_logger(os.path.join(args.output_dir, "log.txt"))
+
+    if os.path.isfile(args.data_path):
+        with open(args.data_path, 'r') as fp:
+            dataset = json.load(fp)
     else:
+        dataset = load_dataset(config["dataset"])["validation"].to_pandas()
 
-        api_key = config["keys"][args.family]
-        api = API_LIST[args.family]
+        diff_levels_int = [int(level) for level in args.diff_levels if level != ',']
+        dataset = dataset[dataset['difficulty_level'].isin(diff_levels_int)]
         
-        if not os.path.isdir(args.output_dir):
-            os.makedirs(args.output_dir + '/temp')
-        
-        logger = get_logger(os.path.join(args.output_dir, "log.txt"))
+        if args.seed > 0:
+            dataset = dataset.sample(n=args.seed_size, random_state=args.seed)
 
-        if os.path.isfile(args.data_path):
-            with open(args.data_path, 'r') as fp:
-                dataset = json.load(fp)
-        else:
-            dataset = load_dataset(config["dataset"])["validation"].to_pandas()
+    logger.info("Experiment details:")
+    logger.info('\t>>>seed: {}'.format(args.seed))
+    logger.info('\t>>>random size: {}'.format(args.seed_size))
+    logger.info('\t>>>model: {}'.format(args.model))
+    logger.info('\t>>>text mode: {}'.format(args.llm))
+    logger.info('\t>>>difficulty level: {}'.format(diff_levels_int))
 
-            diff_levels_int = [int(level) for level in args.diff_levels if level != ',']
-            dataset = dataset[dataset['difficulty_level'].isin(diff_levels_int)]
-            
-            if args.seed > 0:
-                dataset = dataset.sample(n=args.seed_size, random_state=args.seed)
+    api(dataset, args.model, api_key, output_path, args.llm)
 
-        logger.info("Experiment details:")
-        logger.info('\t>>>seed: {}'.format(args.seed))
-        logger.info('\t>>>random size: {}'.format(args.seed_size))
-        logger.info('\t>>>model: {}'.format(args.model))
-        logger.info('\t>>>text mode: {}'.format(args.llm))
-        logger.info('\t>>>difficulty level: {}'.format(diff_levels_int))
+    responses = dict()
 
-        api(dataset, args.model, api_key, args.output_dir + '/temp/', args.llm)
+    for file in sorted(os.listdir(output_path)):
+        with open(os.path.join(output_path, file), 'r') as fp:
+            response = json.load(fp)
+        responses[response['query_id']] = response
 
-        responses = dict()
-        
-        for file in sorted(os.listdir(args.output_dir + '/temp/')):
-            with open(os.path.join(args.output_dir + '/temp/', file), 'r') as fp:
-                response = json.load(fp)
-            responses[response['query_id']] = response
-
-        save_results(args.output_dir, args.model, responses)
+    save_path = os.path.join(args.output_dir, args.model + '.json')
+    if not result_exists(save_path):
+        save_results(save_path, responses)
 
 
 if __name__ == "__main__":
