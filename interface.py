@@ -12,7 +12,7 @@ def get_args(description='Benchly on LLM/VLMs'):
     parser.add_argument('--family', type=str, default='gpt', help='family for api key retrieval')
     parser.add_argument('--seed', type=int, default=42, help='Whether to evaluate random samples')
     parser.add_argument('--seed_size', type=int, default=5, help='Number of random samples')
-    parser.add_argument('--diff_levels', type=list, default=[1, 3], help='difficulty levels to evaluate')
+    parser.add_argument('--diff_levels', type=list, default=[1,2,3,4,5], help='difficulty levels to evaluate')
 
     parser.add_argument('--config', type=str, default='config.json', help='config file path')
     parser.add_argument('--output_dir', type=str, default='ckpts/', help='output directory')

@@ -54,7 +54,7 @@ def main():
 
     save_path = os.path.join(args.output_dir, args.model + '.json')
     if not result_exists(save_path):
-        save_results(save_path, responses)
+        save_results(save_path, answers)
 
 
 if __name__ == "__main__":

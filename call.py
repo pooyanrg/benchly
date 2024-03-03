@@ -229,6 +229,9 @@ def mixtral_call(dataset, model_name, api_key, path, text_only=True):
     
 def gemini_judge(question, responses, model_name, api_key, path):
 
+    max_retries = 10
+    base_delay = 1
+
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(model_name)
 
@@ -244,11 +247,37 @@ def gemini_judge(question, responses, model_name, api_key, path):
         save_path = os.path.join(path, model_name + '_' + str(id)) + '.json'
 
         if not result_exists(save_path):
-            response = model.generate_content(query, stream=True)
-            response.resolve()
-            response_dict['judge_response'] = response.candidates[0].content.parts[0].text
+            for retry_attempt in range(max_retries):
+                try:
+                    response = model.generate_content(query, stream=True)
+                    response.resolve()
+                    response_dict['judge_response'] = response.candidates[0].content.parts[0].text
 
-            save_results(save_path, response_dict)
+                    save_results(save_path, response_dict)
+                    break
+                except ServiceUnavailable as e:
+                        if retry_attempt < max_retries - 1:
+                            delay = base_delay * 2 ** retry_attempt
+                            print(f"Retrying in {delay} seconds...")
+                            time.sleep(delay)
+                except Aborted as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
+                except PermissionDenied as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
+                except ResourceExhausted as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
+            
+            if retry_attempt > max_retries:
+                print("server error!")
 
 def gpt_judge(question, responses, model_name, api_key, path):
 
