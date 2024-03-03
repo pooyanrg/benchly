@@ -48,7 +48,8 @@ def main():
         dataset = dataset[dataset['difficulty_level'].isin(diff_levels_int)]
         
         if args.seed > 0:
-            dataset = dataset.sample(n=args.seed_size, random_state=args.seed)
+            if args.seed_size < len(dataset):
+                dataset = dataset.sample(n=args.seed_size, random_state=args.seed)
 
     logger.info("Experiment details:")
     logger.info('\t>>>seed: {}'.format(args.seed))
