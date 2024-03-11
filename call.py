@@ -86,7 +86,7 @@ def get_gpt_payload(model_name, text, image=None):
 
 def gemini_call(dataset, model_name, api_key, path, text_only=True):
 
-    max_retries = 10 
+    max_retries = 15 
     base_delay = 1
 
     genai.configure(api_key=api_key)
@@ -132,6 +132,11 @@ def gemini_call(dataset, model_name, api_key, path, text_only=True):
                         delay = base_delay * 2 ** retry_attempt
                         print(f"Retrying in {delay} seconds...")
                         time.sleep(delay)
+                except InternalServerError as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
             else:
                 try:
                     if not result_exists(save_path):
@@ -156,6 +161,11 @@ def gemini_call(dataset, model_name, api_key, path, text_only=True):
                         print(f"Retrying in {delay} seconds...")
                         time.sleep(delay)
                 except ResourceExhausted as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
+                except InternalServerError as e:
                     if retry_attempt < max_retries - 1:
                         delay = base_delay * 2 ** retry_attempt
                         print(f"Retrying in {delay} seconds...")
@@ -235,14 +245,15 @@ def gemini_judge(question, responses, model_name, api_key, path):
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(model_name)
 
-
     for id, value in tqdm(responses.items()):
         response_dict = dict()
-        response_dict['query'] = question
+
         response_dict['query_id'] = id
         
         temp_values = dict({'model_output': value['response'], 'gt_answer':value['gt_answer']})
         query = question.format(**temp_values)
+
+        response_dict['query'] = query
 
         save_path = os.path.join(path, model_name + '_' + str(id)) + '.json'
 
@@ -252,6 +263,8 @@ def gemini_judge(question, responses, model_name, api_key, path):
                     response = model.generate_content(query, stream=True)
                     response.resolve()
                     response_dict['judge_response'] = response.candidates[0].content.parts[0].text
+                    response_dict['response'] = value['response']
+                    response_dict['gt_answer'] = value['gt_answer']
 
                     save_results(save_path, response_dict)
                     break
@@ -275,6 +288,11 @@ def gemini_judge(question, responses, model_name, api_key, path):
                         delay = base_delay * 2 ** retry_attempt
                         print(f"Retrying in {delay} seconds...")
                         time.sleep(delay)
+                except InternalServerError as e:
+                    if retry_attempt < max_retries - 1:
+                        delay = base_delay * 2 ** retry_attempt
+                        print(f"Retrying in {delay} seconds...")
+                        time.sleep(delay)
             
             if retry_attempt > max_retries:
                 print("server error!")
@@ -288,11 +306,12 @@ def gpt_judge(question, responses, model_name, api_key, path):
     for id, value in tqdm(responses.items()):
 
         response_dict = dict()
-        response_dict['query'] = question
         response_dict['query_id'] = id
         
         temp_values = dict({'model_output': value['response'], 'gt_answer':value['gt_answer']})
         query = question.format(**temp_values)
+
+        response_dict['query'] = query
         
         payload = get_gpt_payload(model_name, query)
 
@@ -305,6 +324,8 @@ def gpt_judge(question, responses, model_name, api_key, path):
                 )
 
                 response_dict['judge_response'] = response.json()
+                response_dict['response'] = value['response']
+                response_dict['gt_answer'] = value['gt_answer']
 
                 save_results(save_path, response_dict)
         except:
@@ -316,12 +337,13 @@ def mixtral_judge(question, responses, model_name, api_key, path):
 
     for id, value in tqdm(responses.items()):
         response_dict = dict()
-        response_dict['query'] = question
+        
         response_dict['query_id'] = id
         
         temp_values = dict({'model_output': value['response'], 'gt_answer':value['gt_answer']})
         query = question.format(**temp_values)
-        
+        response_dict['query'] = query
+
         data = {"model": "mixtral", "messages": [{"role": "user", "content": query}]}
 
         save_path = os.path.join(path, model_name + '_' + str(id)) + '.json'
@@ -332,6 +354,8 @@ def mixtral_judge(question, responses, model_name, api_key, path):
                     "http://localhost:11434/api/chat", headers=headers, json=data
                 )
                 response_dict['judge_response'] = response.json()
+                response_dict['response'] = value['response']
+                response_dict['gt_answer'] = value['gt_answer']
 
                 save_results(save_path, response_dict)
         except:
