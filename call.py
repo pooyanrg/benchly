@@ -307,8 +307,14 @@ def gpt_judge(question, responses, model_name, api_key, path):
 
         response_dict = dict()
         response_dict['query_id'] = id
+
+        response_content = (
+                value["response"]["choices"][0]["message"]["content"]
+                if "response" in value and "choices" in value["response"]
+                else None
+            )
         
-        temp_values = dict({'model_output': value['response'], 'gt_answer':value['gt_answer']})
+        temp_values = dict({'model_output': response_content, 'gt_answer':value['gt_answer']})
         query = question.format(**temp_values)
 
         response_dict['query'] = query
