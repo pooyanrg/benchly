@@ -1,8 +1,8 @@
 import numpy as np
 import requests
 import pandas as pd
-from requests.adapters import HTTPAdapter
-from urllib3.util import Retry
+# from requests.adapters import HTTPAdapter
+# from urllib3.util import Retry
 import google.generativeai as genai
 from google.api_core.exceptions import *
 import time
@@ -12,11 +12,11 @@ import json
 import logging
 from tqdm import tqdm
 
-retry_strategy = Retry(backoff_factor=2, allowed_methods=frozenset(['GET', 'POST']))
-adapter = HTTPAdapter(max_retries=retry_strategy)
-session = requests.Session()
-session.mount('http://', adapter)
-session.mount('https://', adapter)
+# retry_strategy = Retry(backoff_factor=2, allowed_methods=frozenset(['GET', 'POST']))
+# adapter = HTTPAdapter(max_retries=retry_strategy)
+# session = requests.Session()
+# session.mount('http://', adapter)
+# session.mount('https://', adapter)
 
 def get_logger(filename=None):
     logger = logging.getLogger('logger')
@@ -82,6 +82,29 @@ def get_gpt_payload(model_name, text, image=None):
         }
     
     return payload
+
+
+def retry_request(url, headers, payload, total=10, status_forcelist=[429, 500, 502, 503, 504], **kwargs):
+    
+    base_delay = 1
+
+    for retry_attempt in range(total):
+        try:
+            response = requests.post(url, headers=headers, json=payload)
+            if response.status_code in status_forcelist:
+                if retry_attempt < total - 1:
+                    delay = base_delay * 2 ** retry_attempt
+                    print(f"Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    continue
+            return response
+        except requests.exceptions.ConnectionError:
+            pass
+
+    if retry_attempt > total:
+        print("server error!")
+
+    return None
 
 
 def gemini_call(dataset, model_name, api_key, path, text_only=True):
@@ -196,9 +219,7 @@ def gpt_call(dataset, model_name, api_key, path, text_only=True):
 
         try:
             if not result_exists(save_path):
-                response = session.post(
-                    "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
-                )
+                response = retry_request("https://api.openai.com/v1/chat/completions", headers, payload)
                 response_dict['response'] = response.json()
                 save_results(save_path, response_dict)
         except:
@@ -229,9 +250,7 @@ def mixtral_call(dataset, model_name, api_key, path, text_only=True):
 
         try:
             if not result_exists(save_path):
-                response = session.post(
-                    "http://localhost:11434/api/chat", headers=headers, json=data
-                )
+                response = retry_request("http://localhost:11434/api/chat", headers, data)
                 response_dict['response'] = response.json()
                 save_results(save_path, response_dict)
         except:
@@ -325,10 +344,7 @@ def gpt_judge(question, responses, model_name, api_key, path):
 
         try:
             if not result_exists(save_path):
-                response = session.post(
-                    "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
-                )
-
+                response = retry_request("https://api.openai.com/v1/chat/completions", headers, payload)
                 response_dict['judge_response'] = response.json()
                 response_dict['response'] = value['response']
                 response_dict['gt_answer'] = value['gt_answer']
@@ -356,9 +372,7 @@ def mixtral_judge(question, responses, model_name, api_key, path):
 
         try:
             if not result_exists(save_path):
-                response = session.post(
-                    "http://localhost:11434/api/chat", headers=headers, json=data
-                )
+                response = retry_request("http://localhost:11434/api/chat", headers, data)
                 response_dict['judge_response'] = response.json()
                 response_dict['response'] = value['response']
                 response_dict['gt_answer'] = value['gt_answer']
