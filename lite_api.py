@@ -113,7 +113,7 @@ def api_handler(model, dataset, text_only, path, num_retries):
 
         response = completion(model=model, messages=query, num_retries=num_retries)
 
-        response_dict['response'] = str(response['choices'][0]['message']['content'])
+        response_dict['response'] = response['choices'][0]['message']['content']
 
         save_path = os.path.join(path, str(dataset.iloc[i]["query_id"])) + '.json'
 
@@ -127,14 +127,20 @@ def api_handler_judge(model, dataset, path, num_retries, question):
         response_dict['query'] = question
         response_dict['query_id'] = id
 
-        temp_values = dict({'model_output': value['response'], 'gt_answer':value['gt_answer']})
+        response_content = (
+                value["response"]["choices"][0]["message"]["content"]
+                if "response" in value and "choices" in value["response"]
+                else None
+            )
+
+        temp_values = dict({'model_output': response_content, 'gt_answer':value['gt_answer']})
         query = question.format(**temp_values)
 
         query = get_message(query)
 
         response = completion(model=model, messages=query, num_retries=num_retries)
 
-        response_dict['judge_response'] = str(response['choices'][0]['message']['content'])
+        response_dict['judge_response'] = response['choices'][0]['message']['content']
 
         save_path = os.path.join(path, str(id) + '_judged.json')
 
