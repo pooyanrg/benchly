@@ -11,6 +11,7 @@ import numpy as np
 def get_args(description='Benchly Judge Evaluation'):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--llm', action='store_true', help="Whether to use text inputs only.")
+    parser.add_argument('--judge', type=int, default=0, help="Whether to judge the response.")
     parser.add_argument("--model", type=str, default='gpt-4-0613', help='which model to use')
     parser.add_argument("--family", type=str, default='gemini', help='which model to use')
     parser.add_argument('--seed', type=int, default=42, help='Whether to evaluate random samples')
@@ -177,19 +178,20 @@ def main():
 
     make_all(path, temp_path)
 
-    logger.info("\n\n\n")
-    logger.info("Judging LLM/VLMs experiment details:")
+    if args.judge:
+        logger.info("\n\n\n")
+        logger.info("Judging LLM/VLMs experiment details:")
 
-    with open(path, 'r') as fp:
-        dataset = json.load(fp)
-    
-    question = config["template_judge"]
-    logger.info('\t>>>query: {}'.format(question))
+        with open(path, 'r') as fp:
+            dataset = json.load(fp)
+        
+        question = config["template_judge"]
+        logger.info('\t>>>query: {}'.format(question))
 
-    api_handler_judge(model, dataset, temp_path, args.num_retries, question)
+        api_handler_judge(model, dataset, temp_path, args.num_retries, question)
 
-    path = os.path.join(args.experiment, args.family + '_judged.json')
-    make_all(path, temp_path)
+        path = os.path.join(args.experiment, args.family + '_judged.json')
+        make_all(path, temp_path)
 
 
 if __name__ == "__main__":
