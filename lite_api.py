@@ -1,4 +1,7 @@
 from litellm import completion
+from litellm.utils import ModelResponse, Usage, Choices, Message
+
+
 import argparse
 import os
 import json
@@ -41,19 +44,74 @@ def get_logger(filename=None):
 
 def save_results(path, response):
 
-    def convert_numpy_bool(obj):
+    def convert_numpy(obj):
         if isinstance(obj, np.bool_):
             return bool(obj)
-        raise TypeError
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(
+            obj,
+            (
+                np.int_,
+                np.intc,
+                np.intp,
+                np.int8,
+                np.int16,
+                np.int32,
+                np.int64,
+                np.uint8,
+                np.uint16,
+                np.uint32,
+                np.uint64,
+            ),
+        ):
+            return int(obj)
+        elif isinstance(obj, (np.float_, np.float16, np.float32, np.float64)):
+            return float(obj)
+        elif isinstance(obj, (np.complex_, np.complex64, np.complex128)):
+            return {"real": obj.real, "imag": obj.imag}
+        elif isinstance(obj, ModelResponse):
+            return {
+                "id": obj.id,
+                "choices": [convert_numpy(choice) for choice in obj.choices]
+                if hasattr(obj, "choices")
+                else [],
+                "created": obj.created,
+                "model": obj.model,
+                "object": obj.object,
+                "system_fingerprint": obj.system_fingerprint,
+                "usage": convert_numpy(obj.usage)
+                if hasattr(obj.usage, "to_dict")
+                else {},
+            }
+        elif isinstance(obj, Choices):
+            return {
+                "finish_reason": obj.finish_reason,
+                "index": obj.index,
+                "message": convert_numpy(
+                    obj.message
+                ),
+            }
+        elif isinstance(obj, Message):
+            return {"content": obj.content, "role": obj.role}
+        elif isinstance(obj, Usage):
+            return (
+                obj.__dict__
+            )
+        else:
+            raise TypeError(
+                "Unserializable object {} of type {}".format(obj, type(obj))
+            )
 
-    with open(path, 'w') as fp:
-        json.dump(response, fp, default=convert_numpy_bool)
+    try:
+        with open(path, "w") as fp:
+            json.dump(response, fp, default=convert_numpy)
+
+    except Exception as e:
+        print(f"Error saving results: {e}")
 
 def result_exists(path):
     if os.path.exists(path):
-        with open(path, 'r') as fp:
-            temp = json.load(fp)
-        if len(temp.keys()) > 0:
             return 1
     return 0
 
