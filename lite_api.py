@@ -106,6 +106,11 @@ def api_handler(model, dataset, text_only, path, num_retries):
         response_dict['query_id'] = dataset.iloc[i]["query_id"]
         response_dict['gt_answer'] = dataset.iloc[i]["answer"]
 
+        save_path = os.path.join(path, str(dataset.iloc[i]["query_id"])) + '.json'
+
+        if result_exists(save_path):
+            continue
+
         if text_only:
             query = get_message(dataset.iloc[i]["query"])
         else:
@@ -114,8 +119,6 @@ def api_handler(model, dataset, text_only, path, num_retries):
         response = completion(model=model, messages=query, num_retries=num_retries)
 
         response_dict['response'] = response
-
-        save_path = os.path.join(path, str(dataset.iloc[i]["query_id"])) + '.json'
 
         save_results(save_path, response_dict)
 
@@ -126,6 +129,11 @@ def api_handler_judge(model, dataset, path, num_retries, question):
         response_dict = dict()
         response_dict['query'] = question
         response_dict['query_id'] = id
+
+        save_path = os.path.join(path, str(id) + '_judged.json')
+
+        if result_exists(save_path):
+            continue
 
         response_content = (
                 value["response"]["choices"][0]["message"]["content"]
@@ -141,8 +149,6 @@ def api_handler_judge(model, dataset, path, num_retries, question):
         response = completion(model=model, messages=query, num_retries=num_retries)
 
         response_dict['judge_response'] = response
-
-        save_path = os.path.join(path, str(id) + '_judged.json')
 
         save_results(save_path, response_dict)
 
