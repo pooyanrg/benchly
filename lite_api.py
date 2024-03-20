@@ -259,14 +259,14 @@ def main():
         question = config["template_judge"]
         logger.info('\t>>>query: {}'.format(question))
 
-        api_handler_judge(model, dataset, temp_path, args.num_retries, question)
-
-        path = os.path.join(args.experiment, args.family + '_judged.json')
-
         temp_path = args.experiment + '/temp_judge'
 
         if not os.path.isdir(temp_path):
             os.makedirs(temp_path)
+
+        api_handler_judge(model, dataset, temp_path, args.num_retries, question)
+
+        path = os.path.join(args.experiment, args.family + '_judged.json')
 
         make_all(path, temp_path)
 
