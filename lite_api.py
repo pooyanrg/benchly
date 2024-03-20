@@ -20,7 +20,7 @@ def get_args(description='Benchly Judge Evaluation'):
     parser.add_argument('--seed', type=int, default=42, help='Whether to evaluate random samples')
     parser.add_argument('--seed_size', type=int, default=5, help='Number of random samples')
     parser.add_argument('--num_retries', type=int, default=10, help='Number of retires for prompting')
-    parser.add_argument('--diff_levels', type=list, default=[1,2,3,4,5], help='difficulty levels to evaluate')
+    parser.add_argument('--diff_levels', type=list, default=[1,2,3,4], help='difficulty levels to evaluate')
 
     parser.add_argument('--config', type=str, default='config.json', help='config file path')
     parser.add_argument('--experiment', type=str, default='ckpts/', help='experiment directory')
@@ -168,7 +168,7 @@ def api_handler(model, dataset, text_only, path, num_retries):
 
         if result_exists(save_path):
             continue
-
+        
         if text_only:
             query = get_message(dataset.iloc[i]["query"])
         else:
@@ -204,7 +204,7 @@ def api_handler_judge(model, dataset, path, num_retries, question):
 
         query = get_message(query)
 
-        response = completion(model=model, messages=query, num_retries=num_retries)
+        response = completion(model="gpt-3.5-turbo", messages=query, num_retries=num_retries)
 
         response_dict['judge_response'] = response
 
@@ -219,7 +219,7 @@ def main():
     with open(args.config, 'r') as fp:
         config = json.load(fp)
 
-    temp_path = args.experiment + '/temp'
+    temp_path = args.experiment + '/temp_response'
 
     if not os.path.isdir(temp_path):
         os.makedirs(temp_path)
@@ -249,6 +249,12 @@ def main():
     make_all(path, temp_path)
 
     if args.judge:
+
+        temp_path = args.experiment + '/temp_judge'
+
+        if not os.path.isdir(temp_path):
+            os.makedirs(temp_path)
+
         logger.info("\n\n\n")
         logger.info("Judging LLM/VLMs experiment details:")
 
