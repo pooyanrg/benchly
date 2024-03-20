@@ -219,7 +219,7 @@ def main():
     with open(args.config, 'r') as fp:
         config = json.load(fp)
 
-    temp_path = args.experiment + '/temp_response'
+    temp_path = args.experiment + '/temp'
 
     if not os.path.isdir(temp_path):
         os.makedirs(temp_path)
@@ -250,11 +250,6 @@ def main():
 
     if args.judge:
 
-        temp_path = args.experiment + '/temp_judge'
-
-        if not os.path.isdir(temp_path):
-            os.makedirs(temp_path)
-
         logger.info("\n\n\n")
         logger.info("Judging LLM/VLMs experiment details:")
 
@@ -267,6 +262,12 @@ def main():
         api_handler_judge(model, dataset, temp_path, args.num_retries, question)
 
         path = os.path.join(args.experiment, args.family + '_judged.json')
+
+        temp_path = args.experiment + '/temp_judge'
+
+        if not os.path.isdir(temp_path):
+            os.makedirs(temp_path)
+
         make_all(path, temp_path)
 
 
