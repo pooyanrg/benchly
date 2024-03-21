@@ -12,6 +12,8 @@ from datasets import load_dataset
 from tqdm import tqdm
 import numpy as np
 
+import random
+
 def get_args(description='Benchly Judge Evaluation'):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--llm', action='store_true', help="Whether to use text inputs only.")
@@ -183,6 +185,10 @@ def api_handler(model, dataset, text_only, path, num_retries):
 
 def api_handler_judge(model, dataset, path, num_retries, question):
 
+    listed_data = list(dataset.items())
+    random.shuffle(listed_data)
+    dataset = dict(listed_data)
+    
     for id, value in tqdm(dataset.items()):
 
         response_dict = dict()
@@ -212,7 +218,7 @@ def api_handler_judge(model, dataset, path, num_retries, question):
             print("Passed: Raised correct exception. Got openai.BadRequestError\n", e)
             print(type(e))
             continue
-        
+
         response_dict['judge_response'] = response
 
         save_results(save_path, response_dict)
