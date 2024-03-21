@@ -130,7 +130,7 @@ def make_all(path, temp_path):
     if not result_exists(path):
         save_results(path, responses)
 
-def get_message(prompt, image_url=None):
+def get_message(prompt, response=None, image_url=None):
     if image_url:
         message = [
         {
@@ -148,14 +148,12 @@ def get_message(prompt, image_url=None):
             }
         ]
     
-    else:
-        message = [
-            {
-            "role": "user",
-            "content": prompt
-            }
-        ]
+    elif response:
+        message = [{"role": "user","content": response}, {"role": "system","content": prompt}]
     
+    else:
+        message = [{"role": "user", "content": prompt}]
+
     return message
 
 def api_handler(model, dataset, text_only, path, num_retries):
@@ -185,7 +183,7 @@ def api_handler(model, dataset, text_only, path, num_retries):
 
         save_results(save_path, response_dict)
 
-def api_handler_judge(model, dataset, path, num_retries, question):
+def api_handler_judge(model, dataset, path, num_retries, question, system_flag=0):
 
     listed_data = list(dataset.items())
     random.shuffle(listed_data)
@@ -208,10 +206,15 @@ def api_handler_judge(model, dataset, path, num_retries, question):
                 else None
             )
 
-        temp_values = dict({'model_output': response_content, 'gt_answer':value['gt_answer']})
-        query = question.format(**temp_values)
+        if not system_flag:
+            temp_values = dict({'model_output': response_content, 'gt_answer':value['gt_answer']})
+            query = question.format(**temp_values)
 
-        query = get_message(query)
+            query = get_message(query)
+
+        else:
+            query = get_message(question, response_content)
+            response_dict['model_response'] = response_content
 
         try:
             response = completion(model="gpt-3.5-turbo", messages=query, num_retries=num_retries, max_tokens=2048)
@@ -263,7 +266,7 @@ def main():
 
     make_all(path, temp_path)
 
-    if args.judge:
+    if args.judge > 0:
 
         logger.info("\n\n\n")
         logger.info("Judging LLM/VLMs experiment details:")
@@ -272,6 +275,7 @@ def main():
             dataset = json.load(fp)
         
         question = config["template_judge"]
+
         logger.info('\t>>>query: {}'.format(question))
 
         temp_path = args.experiment + '/temp_judge'
@@ -284,6 +288,26 @@ def main():
         path = os.path.join(args.experiment, args.family + '_judged.json')
 
         make_all(path, temp_path)
+    
+    if args.judge == 2:
+        logger.info("\n\n\n")
+        logger.info("Second Judge Evaluation:")
+
+        system_prompt = config["system_prompt"]
+        logger.info('\t>>>system prompt: {}'.format(system_prompt))
+
+        temp_path = args.experiment + '/temp_judge2'
+
+        if not os.path.isdir(temp_path):
+            os.makedirs(temp_path)
+
+        api_handler_judge(model, dataset, temp_path, args.num_retries, system_prompt, 1)
+
+        path = os.path.join(args.experiment, args.family + '_judged_2.json')
+
+        make_all(path, temp_path)
+
+
 
 
 if __name__ == "__main__":
