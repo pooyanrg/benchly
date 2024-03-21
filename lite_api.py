@@ -160,6 +160,8 @@ def get_message(prompt, image_url=None):
 
 def api_handler(model, dataset, text_only, path, num_retries):
 
+    dataset = dataset.sample(frac = 1)
+
     for i in tqdm(range(len(dataset))):
 
         response_dict = dict()
@@ -188,7 +190,7 @@ def api_handler_judge(model, dataset, path, num_retries, question):
     listed_data = list(dataset.items())
     random.shuffle(listed_data)
     dataset = dict(listed_data)
-    
+
     for id, value in tqdm(dataset.items()):
 
         response_dict = dict()
