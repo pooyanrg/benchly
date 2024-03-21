@@ -179,7 +179,7 @@ def api_handler(model, dataset, text_only, path, num_retries):
         else:
             query = get_message(dataset.iloc[i]["query"], dataset.iloc[i]["image"])
 
-        response = completion(model=model, messages=query, num_retries=num_retries)
+        response = completion(model=model, messages=query, num_retries=num_retries, max_tokens=2048)
 
         response_dict['response'] = response
 
@@ -214,7 +214,7 @@ def api_handler_judge(model, dataset, path, num_retries, question):
         query = get_message(query)
 
         try:
-            response = completion(model="gpt-3.5-turbo", messages=query, num_retries=num_retries)
+            response = completion(model="gpt-3.5-turbo", messages=query, num_retries=num_retries, max_tokens=2048)
 
         except openai.BadRequestError as e:
             print("Passed: Raised correct exception. Got openai.BadRequestError\n", e)
