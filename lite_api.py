@@ -1,6 +1,7 @@
 from litellm import completion
 from litellm.utils import ModelResponse, Usage, Choices, Message
 
+import openai
 
 import argparse
 import os
@@ -204,8 +205,14 @@ def api_handler_judge(model, dataset, path, num_retries, question):
 
         query = get_message(query)
 
-        response = completion(model="gpt-3.5-turbo", messages=query, num_retries=num_retries)
+        try:
+            response = completion(model="gpt-3.5-turbo", messages=query, num_retries=num_retries)
 
+        except openai.BadRequestError as e:
+            print("Passed: Raised correct exception. Got openai.BadRequestError\n", e)
+            print(type(e))
+            continue
+        
         response_dict['judge_response'] = response
 
         save_results(save_path, response_dict)
