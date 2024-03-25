@@ -12,7 +12,12 @@ from datasets import load_dataset
 from tqdm import tqdm
 import numpy as np
 
+import base64
+from PIL import Image
+import io
+
 import random
+import time
 
 def get_args(description='Benchly Judge Evaluation'):
     parser = argparse.ArgumentParser(description=description)
@@ -130,8 +135,8 @@ def make_all(path, temp_path):
     if not result_exists(path):
         save_results(path, responses)
 
-def get_message(prompt, response=None, image_url=None):
-    if image_url:
+def get_message(prompt, response=None, base64_image=None):
+    if base64_image:
         message = [
         {
             "role": "user",
@@ -142,7 +147,7 @@ def get_message(prompt, response=None, image_url=None):
                 },
                 {
                     "type": "image_url",
-                    "image_url": {"url": image_url}
+                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
                     }
                 ]
             }
@@ -175,11 +180,30 @@ def api_handler(model, dataset, text_only, path, num_retries):
         if text_only:
             query = get_message(dataset.iloc[i]["query"])
         else:
-            query = get_message(dataset.iloc[i]["query"], dataset.iloc[i]["image"])
+            # image = Image.open(io.BytesIO(dataset.iloc[i]["image"]['bytes']))
+            image = base64.b64encode(dataset.iloc[i]["image"]['bytes']).decode("utf-8")
+            # print(type(image))
+            # dfdsf
+            query = get_message(dataset.iloc[i]["query"], None, image)
 
-        response = completion(model=model, messages=query, num_retries=num_retries, max_tokens=2048)
+        try:
 
-        response_dict['response'] = response
+            response = completion(model=model, messages=query, num_retries=num_retries, max_tokens=2048)
+            response_dict['response'] = response
+
+        except openai.BadRequestError as e:
+            response_dict['response'] = []
+            print("Passed: Raised correct exception. Got openai.BadRequestError\n", e)
+            print(type(e))
+            continue
+        
+        except openai.RateLimitError as e:
+            response_dict['response'] = []
+            print("Passed: Raised correct exception. Got openai.RateLimitError\n", e)
+            print(type(e))
+            print("waiting a second....")
+            time.sleep(1.0)
+            continue
 
         save_results(save_path, response_dict)
 
@@ -220,8 +244,17 @@ def api_handler_judge(model, dataset, path, num_retries, question, system_flag=0
             response = completion(model="gpt-3.5-turbo", messages=query, num_retries=num_retries, max_tokens=2048)
 
         except openai.BadRequestError as e:
+            response_dict['response'] = []
             print("Passed: Raised correct exception. Got openai.BadRequestError\n", e)
             print(type(e))
+            continue
+
+        except openai.RateLimitError as e:
+            response_dict['response'] = []
+            print("Passed: Raised correct exception. Got openai.RateLimitError\n", e)
+            print(type(e))
+            print("waiting a second....")
+            time.sleep(1.0)
             continue
 
         response_dict['judge_response'] = response
@@ -306,8 +339,6 @@ def main():
         path = os.path.join(args.experiment, args.family + '_judged_2.json')
 
         make_all(path, temp_path)
-
-
 
 
 if __name__ == "__main__":
