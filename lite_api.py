@@ -1,3 +1,4 @@
+import litellm
 from litellm import completion
 from litellm.utils import ModelResponse, Usage, Choices, Message
 
@@ -51,7 +52,7 @@ def get_logger(filename=None):
     return logger
 
 def save_results(path, response):
-
+    
     def convert_numpy(obj):
         if isinstance(obj, np.bool_):
             return bool(obj)
@@ -180,14 +181,15 @@ def api_handler(model, dataset, text_only, path, num_retries):
         if text_only:
             query = get_message(dataset.iloc[i]["query"])
         else:
-            # image = Image.open(io.BytesIO(dataset.iloc[i]["image"]['bytes']))
-            image = base64.b64encode(dataset.iloc[i]["image"]['bytes']).decode("utf-8")
-            # print(type(image))
-            # dfdsf
-            query = get_message(dataset.iloc[i]["query"], None, image)
+            image_data = dataset.iloc[i]["image"]['bytes']
+            buffer = io.BytesIO(image_data)
+            image = Image.open(buffer).convert("RGB")
+            buffer = io.BytesIO()
+            image.save(buffer, format="JPEG")
+            image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+            query = get_message(dataset.iloc[i]["query"], None, image_base64)
 
         try:
-
             response = completion(model=model, messages=query, num_retries=num_retries, max_tokens=2048)
             response_dict['response'] = response
 
